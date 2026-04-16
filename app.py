@@ -11,19 +11,25 @@ st.set_page_config(page_title="Sejump | Opus Mage AI", page_icon="🔱", layout=
 if "google_auth" not in st.session_state:
     st.session_state.logado = False
 
-# Simulando a verificação (No Streamlit Cloud, o st.login resolve)
+# --- TELA DE LOGIN ATUALIZADA ---
 def login_form():
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<div style='text-align:center; padding:50px; border:1px solid #222; border-radius:20px; background-color:#050505;'> <h1 style='color:#7d33ff;'>🔱 SEJUMP</h1> <p style='color:#888;'>Nexus do Opus Mage</p></div>", unsafe_allow_html=True)
-        # O Streamlit Cloud gerencia o botão se configurado, aqui vamos capturar o usuário
-        user = st.text_input("Digite seu Nome/E-mail para entrar no Nexus:")
-        if st.button("Acessar Sistema"):
-            if user:
-                st.session_state.user_id = user.lower().replace(" ", "_")
-                st.session_state.logado = True
-                st.rerun()
+        
+        # Usamos um form para garantir que o clique envie os dados
+        with st.form("login_nexus"):
+            user = st.text_input("Digite seu Nome/E-mail:")
+            submit = st.form_submit_button("ACESSAR SISTEMA")
+            
+            if submit:
+                if user:
+                    st.session_state.user_id = user.lower().replace(" ", "_").replace("@", "_").replace(".", "_")
+                    st.session_state.logado = True
+                    st.rerun() # Isso aqui é o que faz a mágica de trocar a tela!
+                else:
+                    st.error("Mestre, identifique-se primeiro!")
 
 # --- 3. LÓGICA DE DADOS POR USUÁRIO ---
 def carregar_dados(user_id):
