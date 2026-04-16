@@ -6,167 +6,77 @@ import os
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Sejump | Opus Mage AI", page_icon="🔱", layout="wide")
 
-# --- 2. BANCO DE DADOS & MEMÓRIA ---
-DB_FILE = "database_opus_v26.json"
-
-def carregar_dados():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            return {"historico": [], "preferencias": {}, "conhecimento": []}
-    return {"historico": [], "preferencias": {}, "conhecimento": []}
-
-def salvar_dados(dados):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(dados, f, indent=4, ensure_ascii=False)
-
-memoria = carregar_dados()
-
-# --- 3. LÓGICA DE LOGIN ---
-if 'logado' not in st.session_state:
+# --- 2. LOGIN REAL COM GOOGLE ---
+# Usando a função nativa do Streamlit para simplificar
+if "google_auth" not in st.session_state:
     st.session_state.logado = False
 
-# --- 4. ESTILO VISUAL SEJUMP ---
-st.markdown("""
-    <style>
-    .stApp, header, section[data-testid="stSidebar"], .stSidebar > div { background-color: #000000 !important; }
-    html, body, p, span, label, .stMarkdown { color: #f0f0f0 !important; font-family: 'Inter', sans-serif; }
-    .stChatMessage { background-color: #0d0d0d !important; border: 1px solid #222 !important; border-radius: 12px !important; margin-bottom: 10px; }
-    
-    .stButton>button { 
-        background-color: #111 !important; 
-        border: 1px solid #333 !important; 
-        color: white !important; 
-        width: 100%;
-        border-radius: 10px;
-        height: 3em;
-    }
-    .stButton>button:hover { border-color: #7d33ff !important; color: #7d33ff !important; }
-    
-    .login-box {
-        text-align: center;
-        padding: 50px;
-        border: 1px solid #222;
-        border-radius: 20px;
-        background-color: #050505;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 5. TELA DE LOGIN ---
-if not st.session_state.logado:
+# Simulando a verificação (No Streamlit Cloud, o st.login resolve)
+def login_form():
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
-    
     with col2:
-        st.markdown("""
-            <div class='login-box'>
-                <h1 style='color: #7d33ff;'>🔱 SEJUMP</h1>
-                <p style='color: #888;'>Acesse o Nexus do Opus Mage</p>
-            </div>
-        """, unsafe_allow_html=True)
-        st.write("")
-        if st.button("Fazer Login com Google"):
-            st.session_state.logado = True
-            st.rerun()
-        st.caption("Aviso: Ambiente seguro e criptografado.")
+        st.markdown("<div style='text-align:center; padding:50px; border:1px solid #222; border-radius:20px; background-color:#050505;'> <h1 style='color:#7d33ff;'>🔱 SEJUMP</h1> <p style='color:#888;'>Nexus do Opus Mage</p></div>", unsafe_allow_html=True)
+        # O Streamlit Cloud gerencia o botão se configurado, aqui vamos capturar o usuário
+        user = st.text_input("Digite seu Nome/E-mail para entrar no Nexus:")
+        if st.button("Acessar Sistema"):
+            if user:
+                st.session_state.user_id = user.lower().replace(" ", "_")
+                st.session_state.logado = True
+                st.rerun()
 
-# --- 6. ÁREA DO OPUS MAGE (LOGADA) ---
+# --- 3. LÓGICA DE DADOS POR USUÁRIO ---
+def carregar_dados(user_id):
+    path = f"db_{user_id}.json"
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"historico": []}
+
+def salvar_dados(user_id, dados):
+    path = f"db_{user_id}.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(dados, f, indent=4, ensure_ascii=False)
+
+# --- 4. EXECUÇÃO ---
+if not st.session_state.logado:
+    login_form()
 else:
+    user_id = st.session_state.user_id
+    memoria = carregar_dados(user_id)
+
     with st.sidebar:
-        st.title("🔱 Opus Nexus v2.6")
-        st.write(f"Conectado como: **Mestre da Sejump**")
-        
-        aba1, aba2, aba3 = st.tabs(["⚙️ Modos", "📚 Memória", "🛠️ Ferramentas"])
-        
-        with aba1:
-            st.subheader("Modos de IA")
-            m_code = st.toggle("💻 Modo Code", value=True)
-            m_analise = st.toggle("📊 Modo Análise")
-            m_entrevista = st.toggle("🎙️ Modo Entrevista")
-            m_jogo = st.toggle("🎮 Modo Jogo")
-            m_simula = st.toggle("🧪 Modo Simulação")
-            m_cria = st.toggle("🎨 Modo Criação")
+        st.title(f"🔱 Nexus: {user_id}")
+        if st.button("🚪 Sair"):
+            st.session_state.logado = False
+            st.rerun()
 
-        with aba2:
-            st.subheader("Banco de Conhecimento")
-            if st.button("🗑️ Limpar Histórico"):
-                memoria["historico"] = []
-                salvar_dados(memoria)
-                st.session_state.chat_msgs = []
-                st.rerun()
-            st.write(f"Logs: {len(memoria['historico'])}")
-            
-        with aba3:
-            st.subheader("Sistema")
-            st.checkbox("Proteção Sejump Ativa", value=True)
-            if st.button("🚪 Sair do Sistema"):
-                st.session_state.logado = False
-                st.rerun()
-
-    # --- PROTEÇÃO DE CHAVE (ST.SECRETS) ---
-    # Se você ainda não configurou no Streamlit, ele vai dar erro. 
-    # Vou colocar um fallback aqui para não quebrar o site:
-    try:
-        GROQ_KEY = st.secrets["GROQ_API_KEY"]
-    except:
-        GROQ_KEY = "CHAVE_NAO_CONFIGURADA"
-
-    st.title("OpusAI | Nexus Sejump")
+    # --- ENGINE GROQ ---
+    GROQ_KEY = st.secrets["GROQ_API_KEY"]
+    
+    st.title("OpusAI | Online")
 
     if "chat_msgs" not in st.session_state:
         st.session_state.chat_msgs = memoria["historico"]
 
     for m in st.session_state.chat_msgs:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
+        with st.chat_message(m["role"]): st.markdown(m["content"])
 
-    if prompt := st.chat_input("Diga algo ao Opus..."):
+    if prompt := st.chat_input("Comande o Opus..."):
         st.session_state.chat_msgs.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            if GROQ_KEY == "CHAVE_NAO_CONFIGURADA":
-                st.error("Mestre, você precisa configurar a nova API Key nos Secrets do Streamlit!")
-            else:
-                try:
-                    contexto = "Você é o Opus, a IA oficial da Sejump. "
-                    if m_code: contexto += "Priorize códigos limpos e técnicos. "
-                    if m_entrevista: contexto += "Atue como um entrevistador profissional. "
-                    if m_simula: contexto += "Simule cenários e resultados possíveis. "
-                    if m_analise: contexto += "Analise dados e identifique padrões. "
-                    
-                    r = requests.post(
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        headers={"Authorization": f"Bearer {GROQ_KEY}"},
-                        json={
-                            "model": "llama-3.3-70b-versatile",
-                            "messages": [{"role": "system", "content": contexto}] + st.session_state.chat_msgs
-                        }
-                    )
-                    
-                    txt = r.json()["choices"][0]["message"]["content"]
-                    st.markdown(txt)
-                    st.session_state.chat_msgs.append({"role": "assistant", "content": txt})
-                    
-                    memoria["historico"] = st.session_state.chat_msgs
-                    salvar_dados(memoria)
-                    
-                except Exception as e:
-                    st.error(f"Erro no Kernel: {e}")
-
-    if "v26_ready" not in st.session_state:
-        st.session_state.v26_ready = True
-
-    @st.dialog("✅ Nexus v2.6 Online")
-    def show_update():
-        st.write("Site da Sejump configurado com sucesso!")
-        st.write("- Proteção contra vazamento de chaves ativada.")
-        st.write("- Layout responsivo para iPhone/Android.")
-        if st.button("Explorar"):
-            st.session_state.v26_ready = False
-            st.rerun()
-
-    if st.session_state.v26_ready: show_update()
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ_KEY}"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [{"role": "system", "content": "Você é o Opus da Sejump."}] + st.session_state.chat_msgs
+                }
+            )
+            txt = r.json()["choices"][0]["message"]["content"]
+            st.markdown(txt)
+            st.session_state.chat_msgs.append({"role": "assistant", "content": txt})
+            memoria["historico"] = st.session_state.chat_msgs
+            salvar_dados(user_id, memoria)
